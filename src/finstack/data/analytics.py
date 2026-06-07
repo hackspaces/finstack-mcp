@@ -435,7 +435,7 @@ def screen_stocks(
                 continue
             if market_cap_min and mcap and mcap < market_cap_min:
                 continue
-            if dividend_yield_min and dy and dy < dividend_yield_min / 100:
+            if dividend_yield_min and dy and dy < dividend_yield_min:
                 continue
             if debt_equity_max and de and de > debt_equity_max:
                 continue
@@ -449,8 +449,8 @@ def screen_stocks(
                 "pe_ratio": round(pe, 2) if pe else None,
                 "roe": round(roe * 100, 2) if roe else None,
                 "market_cap": mcap,
-                "market_cap_fmt": format_market_cap(mcap),
-                "dividend_yield": round(dy * 100, 2) if dy else None,
+                "market_cap_fmt": format_market_cap(mcap, safe_get(info, "currency", default="USD")),
+                "dividend_yield": round(dy, 2) if dy else None,
                 "debt_to_equity": round(de, 2) if de else None,
                 "sector": stock_sector,
             })
@@ -522,7 +522,7 @@ def compare_stocks(symbols: list[str]) -> dict:
                         "revenue_growth": round(safe_get(info, "revenueGrowth", default=0) * 100, 2)
                                           if safe_get(info, "revenueGrowth") else None,
                         "debt_to_equity": safe_get(info, "debtToEquity"),
-                        "dividend_yield": round(safe_get(info, "dividendYield", default=0) * 100, 2)
+                        "dividend_yield": round(safe_get(info, "dividendYield", default=0), 2)
                                           if safe_get(info, "dividendYield") else None,
                         "beta": safe_get(info, "beta"),
                         "sector": safe_get(info, "sector"),
