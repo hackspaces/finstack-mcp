@@ -7,6 +7,7 @@ Recharts, plotly, or an HTML artifact) using the `render_hint` + series.
 """
 
 import json
+from finstack.utils.respond import dumps as _dumps
 
 from finstack.data import chart_engine as ce
 
@@ -17,7 +18,8 @@ def register_charts_tools(mcp):
     @mcp.tool()
     def chart_data(symbols: str, chart: str = "price",
                    period: str = "1y", interval: str = "1d",
-                   window: int = 21, bins: int = 30, years: int = 6) -> str:
+                   window: int = 21, bins: int = 30, years: int = 6,
+                   max_points: int = 150) -> str:
         """Get clean, plot-ready data to render an interactive chart.
 
         Returns a render-agnostic envelope: {chart, render_hint, title, x_label,
@@ -50,7 +52,7 @@ def register_charts_tools(mcp):
         """
         syms = [s.strip() for s in symbols.split(",") if s.strip()]
         if not syms:
-            return json.dumps({"error": "no symbols provided"}, indent=2)
+            return _dumps({"error": "no symbols provided"}, indent=2)
         c = chart.strip().lower()
         try:
             if c == "price":
@@ -72,11 +74,22 @@ def register_charts_tools(mcp):
             elif c == "seasonality":
                 res = ce.seasonality(syms[0], years)
             else:
-                return json.dumps({"error": f"unknown chart '{chart}'",
+                return _dumps({"error": f"unknown chart '{chart}'",
                                    "valid_charts": ["price", "candlestick", "comparison", "drawdown",
                                                     "returns_histogram", "rolling_volatility",
                                                     "correlation_heatmap", "efficient_frontier",
                                                     "seasonality"]}, indent=2)
         except Exception as e:
-            return json.dumps({"error": f"{type(e).__name__}: {e}", "chart": c}, indent=2)
-        return json.dumps(res, indent=2, default=str)
+            return _dumps({"error": f"{type(e).__name__}: {e}", "chart": c}, indent=2)
+
+        # context-engineering: thin long series so a chart stays cheap to read
+        from finstack.utils.respond import downsample
+        if isinstance(res, dict) and max_points and "error" not in res:
+            if "labels" in res:
+                res["labels"] = downsample(res["labels"], max_points)
+            for s in res.get("series", []):
+                s["data"] = downsample(s["data"], max_points)
+            for key in ("candles", "points"):
+                if key in res:
+                    res[key] = downsample(res[key], max_points)
+        return _dumps(res, indent=2, default=str)

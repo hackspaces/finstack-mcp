@@ -16,10 +16,11 @@ Three umbrella tools that absorb many narrow ones (vs calling each separately):
 Each branch reuses the SAME data-layer call its single-purpose wrapper uses
 (indian.py, analytics.py, market_intelligence.py), so behaviour matches the
 originals exactly. Unknown action/view -> a loud error JSON listing the valid
-choices. Every tool returns json.dumps(result, indent=2, default=str).
+choices. Every tool returns _dumps(result, indent=2, default=str).
 """
 
 import json
+from finstack.utils.respond import dumps as _dumps
 
 from finstack.config import config
 from finstack.utils.helpers import tier_locked_error
@@ -113,14 +114,14 @@ def register_pulse_tools(mcp):
         wanted = [v for v in raw if not (v in seen or seen.add(v))]
 
         if not wanted:
-            return json.dumps({
+            return _dumps({
                 "error": "No views provided.",
                 "valid_views": sorted(PULSE_VIEWS.keys()),
             }, indent=2)
 
         unknown = [v for v in wanted if v not in PULSE_VIEWS]
         if unknown:
-            return json.dumps({
+            return _dumps({
                 "error": f"Unknown view(s): {', '.join(unknown)}.",
                 "valid_views": sorted(PULSE_VIEWS.keys()),
             }, indent=2)
@@ -153,7 +154,7 @@ def register_pulse_tools(mcp):
         }
         if sym:
             out["symbol"] = sym
-        return json.dumps(out, indent=2, default=str)
+        return _dumps(out, indent=2, default=str)
 
     @mcp.tool()
     def screen(
@@ -189,7 +190,7 @@ def register_pulse_tools(mcp):
             screen("US", pe_max=20, sector="Technology") → Cheap US tech stocks
         """
         if not config.is_tool_allowed("stock_screener"):
-            return json.dumps(tier_locked_error("stock_screener"), indent=2)
+            return _dumps(tier_locked_error("stock_screener"), indent=2)
 
         result = screen_stocks(
             exchange=exchange,
@@ -202,7 +203,7 @@ def register_pulse_tools(mcp):
             sector=sector if sector else None,
             limit=min(limit, 25),
         )
-        return json.dumps(result, indent=2, default=str)
+        return _dumps(result, indent=2, default=str)
 
     @mcp.tool()
     def funds(
@@ -246,26 +247,26 @@ def register_pulse_tools(mcp):
             # mirror indian.py mutual_fund_nav -> get_mutual_fund_nav(query)
             query = scheme_code.strip() or scheme_name.strip()
             if not query:
-                return json.dumps({
+                return _dumps({
                     "error": "action 'nav' needs `scheme_code` or `scheme_name`.",
                 }, indent=2)
             from finstack.data.nse_advanced import get_mutual_fund_nav
-            return json.dumps(get_mutual_fund_nav(query), indent=2, default=str)
+            return _dumps(get_mutual_fund_nav(query), indent=2, default=str)
 
         if act == "overlap":
             # mirror intelligence.py get_mf_overlap -> get_mf_overlap(fund1, fund2)
             f1, f2 = symbol1.strip(), symbol2.strip()
             if not f1 or not f2:
-                return json.dumps({
+                return _dumps({
                     "error": "action 'overlap' needs both `symbol1` and `symbol2` (fund names).",
                 }, indent=2)
-            return json.dumps(_get_mf_overlap(f1, f2), indent=2, default=str)
+            return _dumps(_get_mf_overlap(f1, f2), indent=2, default=str)
 
         if act == "flows":
             # mirror market_intelligence.py amfi_fund_flows -> get_amfi_fund_flows()
-            return json.dumps(get_amfi_fund_flows(), indent=2, default=str)
+            return _dumps(get_amfi_fund_flows(), indent=2, default=str)
 
-        return json.dumps({
+        return _dumps({
             "error": f"unknown action '{action}'",
             "valid_actions": ["nav", "overlap", "flows"],
         }, indent=2)

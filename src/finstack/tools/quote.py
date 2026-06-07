@@ -17,6 +17,7 @@ called (copied, not reinvented):
 """
 
 import json
+from finstack.utils.respond import dumps as _dumps
 
 from finstack.data.nse import get_nse_quote, get_bse_quote, get_index_data
 from finstack.data.global_markets import (
@@ -142,14 +143,14 @@ def register_quote_tools(mcp):
         """
         v = view.strip().lower()
         if v not in VALID_VIEWS:
-            return json.dumps({
+            return _dumps({
                 "error": f"unknown view '{view}'",
                 "valid_views": VALID_VIEWS,
             }, indent=2)
 
         mkt = market.strip().lower()
         if mkt not in VALID_MARKETS:
-            return json.dumps({
+            return _dumps({
                 "error": f"unknown market '{market}'",
                 "valid_markets": VALID_MARKETS,
             }, indent=2)
@@ -158,28 +159,28 @@ def register_quote_tools(mcp):
         if v == "index":
             index_name = symbols.strip() or "NIFTY50"
             result = get_index_data(index_name)
-            return json.dumps(result, indent=2, default=str)
+            return _dumps(result, indent=2, default=str)
 
         # --- compare: compare_stocks_tool ---
         if v == "compare":
             sym_list = [s.strip() for s in symbols.split(",") if s.strip()]
             if not sym_list:
-                return json.dumps({"error": "No symbols provided for compare."}, indent=2)
+                return _dumps({"error": "No symbols provided for compare."}, indent=2)
             result = compare_stocks(sym_list)
-            return json.dumps(result, indent=2, default=str)
+            return _dumps(result, indent=2, default=str)
 
         # --- support_resistance ---
         if v == "support_resistance":
             sym = symbols.strip().split(",")[0].strip()
             if not sym:
-                return json.dumps({"error": "No symbol provided for support_resistance."}, indent=2)
+                return _dumps({"error": "No symbol provided for support_resistance."}, indent=2)
             result = compute_support_resistance(sym)
-            return json.dumps(result, indent=2, default=str)
+            return _dumps(result, indent=2, default=str)
 
         # --- quote (possibly batched) ---
         tickers = [s.strip() for s in symbols.split(",") if s.strip()]
         if not tickers:
-            return json.dumps({"error": "No symbols provided."}, indent=2)
+            return _dumps({"error": "No symbols provided."}, indent=2)
 
         # single symbol -> return the raw quote dict (mirrors old single tools)
         if len(tickers) == 1:
@@ -187,7 +188,7 @@ def register_quote_tools(mcp):
                 result = _one_quote(tickers[0], mkt)
             except Exception as e:  # fail loud, but as JSON
                 result = {"error": f"{type(e).__name__}: {e}", "symbol": tickers[0]}
-            return json.dumps(result, indent=2, default=str)
+            return _dumps(result, indent=2, default=str)
 
         # batch -> isolate per-symbol failures
         results: dict[str, object] = {}
@@ -197,7 +198,7 @@ def register_quote_tools(mcp):
             except Exception as e:
                 results[sym] = {"error": f"{type(e).__name__}: {e}"}
 
-        return json.dumps({
+        return _dumps({
             "view": "quote",
             "market": mkt,
             "count": len(results),

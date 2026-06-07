@@ -14,6 +14,7 @@ Failures are isolated per symbol so one bad ticker never fails the whole call.
 """
 
 import json
+from finstack.utils.respond import dumps as _dumps
 
 from finstack.data.nse import get_historical_data
 from finstack.data.global_markets import get_global_historical, get_crypto_historical
@@ -104,7 +105,7 @@ def register_history_tools(mcp):
         """
         mode = market.strip().lower()
         if mode not in VALID_MARKETS:
-            return json.dumps({
+            return _dumps({
                 "error": f"Unknown market '{market}'.",
                 "valid_markets": VALID_MARKETS,
             }, indent=2)
@@ -117,7 +118,7 @@ def register_history_tools(mcp):
         tickers = tickers[:MAX_SYMBOLS]
 
         if not tickers:
-            return json.dumps({"error": "No symbols provided."}, indent=2)
+            return _dumps({"error": "No symbols provided."}, indent=2)
 
         results: dict[str, object] = {}
         for sym in tickers:
@@ -141,4 +142,4 @@ def register_history_tools(mcp):
         if dropped:
             out["dropped"] = dropped
             out["note"] = f"Capped at {MAX_SYMBOLS} symbols per call; {len(dropped)} ignored."
-        return json.dumps(out, indent=2, default=str)
+        return _dumps(out, indent=2, default=str)

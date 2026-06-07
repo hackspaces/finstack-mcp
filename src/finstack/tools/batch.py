@@ -11,6 +11,7 @@ fails the whole batch.
 """
 
 import json
+from finstack.utils.respond import dumps as _dumps
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from finstack.data.nse import get_nse_quote
@@ -82,7 +83,7 @@ def register_batch_tools(mcp):
         """
         op = analysis.strip().lower()
         if op not in BATCH_OPS:
-            return json.dumps({
+            return _dumps({
                 "error": f"Unknown analysis '{analysis}'.",
                 "valid_analyses": sorted(BATCH_OPS.keys()),
             }, indent=2)
@@ -95,7 +96,7 @@ def register_batch_tools(mcp):
         tickers = tickers[:MAX_SYMBOLS]
 
         if not tickers:
-            return json.dumps({"error": "No symbols provided."}, indent=2)
+            return _dumps({"error": "No symbols provided."}, indent=2)
 
         fn = BATCH_OPS[op]
         results: dict[str, object] = {}
@@ -122,4 +123,4 @@ def register_batch_tools(mcp):
         if dropped:
             out["dropped"] = dropped
             out["note"] = f"Capped at {MAX_SYMBOLS} symbols per call; {len(dropped)} ignored."
-        return json.dumps(out, indent=2, default=str)
+        return _dumps(out, indent=2, default=str)

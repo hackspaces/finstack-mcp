@@ -12,6 +12,7 @@ silently dropped.
 """
 
 import json
+from finstack.utils.respond import dumps as _dumps
 
 # Per-symbol data-layer functions, copied verbatim from the dedicated wrappers.
 from finstack.data.agents import get_stock_brief, get_stock_debate
@@ -92,7 +93,7 @@ def register_analyzex_tools(mcp):
         """
         requested = [s.strip().lower() for s in lenses.split(",") if s.strip()]
         if not requested:
-            return json.dumps({
+            return _dumps({
                 "error": "No lenses provided.",
                 "valid_lenses": sorted(ANALYZE_LENSES.keys()),
             }, indent=2)
@@ -105,7 +106,7 @@ def register_analyzex_tools(mcp):
         unknown = [l for l in ordered_lenses if l not in ANALYZE_LENSES]
 
         if not valid:
-            return json.dumps({
+            return _dumps({
                 "error": f"No valid lenses in {lenses!r}.",
                 "unknown_lenses": unknown,
                 "valid_lenses": sorted(ANALYZE_LENSES.keys()),
@@ -127,7 +128,7 @@ def register_analyzex_tools(mcp):
         if unknown:
             out["unknown_lenses"] = unknown
             out["valid_lenses"] = sorted(ANALYZE_LENSES.keys())
-        return json.dumps(out, indent=2, default=str)
+        return _dumps(out, indent=2, default=str)
 
     @mcp.tool()
     def portfolio(holdings: list) -> str:
@@ -151,5 +152,5 @@ def register_analyzex_tools(mcp):
             holdings: list of {symbol, qty, avg_price, buy_date (optional)}
         """
         if not holdings:
-            return json.dumps({"error": "No holdings provided."}, indent=2)
-        return json.dumps(analyze_portfolio(holdings), indent=2, default=str)
+            return _dumps({"error": "No holdings provided."}, indent=2)
+        return _dumps(analyze_portfolio(holdings), indent=2, default=str)

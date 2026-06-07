@@ -22,6 +22,7 @@ Failures are isolated per kind so one failing source never fails the whole call.
 """
 
 import json
+from finstack.utils.respond import dumps as _dumps
 
 from finstack.data.market_intelligence import (
     get_insider_trading,
@@ -130,13 +131,13 @@ def register_corporate_tools(mcp):
 
         unknown = [k for k in selected if k not in CORPORATE_KINDS]
         if unknown:
-            return json.dumps({
+            return _dumps({
                 "error": f"Unknown kind(s): {', '.join(unknown)}.",
                 "valid_kinds": sorted(CORPORATE_KINDS.keys()),
             }, indent=2)
 
         if not selected:
-            return json.dumps({
+            return _dumps({
                 "error": "No kinds provided.",
                 "valid_kinds": sorted(CORPORATE_KINDS.keys()),
             }, indent=2)
@@ -149,7 +150,7 @@ def register_corporate_tools(mcp):
             except Exception as e:  # isolate per-kind failures
                 results[kind] = {"error": f"{type(e).__name__}: {e}"}
 
-        return json.dumps({
+        return _dumps({
             "symbol": sym.upper(),
             "kinds": selected,
             "results": results,

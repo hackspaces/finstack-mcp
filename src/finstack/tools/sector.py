@@ -5,6 +5,7 @@ NSE universe. Supports ad-hoc/combinatorial baskets (any ticker list).
 """
 
 import json
+from finstack.utils.respond import dumps as _dumps
 
 from finstack.data import sector_engine as se
 
@@ -54,25 +55,25 @@ def register_sector_tools(mcp):
         a = action.strip().lower()
         try:
             if a == "list":
-                return json.dumps(se.list_baskets(), indent=2, default=str)
+                return _dumps(se.list_baskets(), indent=2, default=str)
             if a == "performance":
-                return json.dumps(se.basket_performance(basket or None, symbols or None, combine or None),
+                return _dumps(se.basket_performance(basket or None, symbols or None, combine or None),
                                   indent=2, default=str)
             if a == "rotation":
                 bl = [b.strip() for b in baskets.split(",") if b.strip()] or None
-                return json.dumps(se.rotation(bl, lookback), indent=2, default=str)
+                return _dumps(se.rotation(bl, lookback), indent=2, default=str)
             if a == "constituents":
-                return json.dumps(se.constituents(basket), indent=2, default=str)
+                return _dumps(se.constituents(basket), indent=2, default=str)
             if a == "compare":
                 names = [b.strip() for b in baskets.split(",") if b.strip()]
                 if not names:
-                    return json.dumps({"error": "compare needs baskets= (comma list)"}, indent=2)
-                return json.dumps({"compare": [se.basket_performance(basket=n) for n in names]},
+                    return _dumps({"error": "compare needs baskets= (comma list)"}, indent=2)
+                return _dumps({"compare": [se.basket_performance(basket=n) for n in names]},
                                   indent=2, default=str)
             if a == "search":
-                return json.dumps(se.search_universe(query, limit), indent=2, default=str)
-            return json.dumps({"error": f"unknown action '{action}'",
+                return _dumps(se.search_universe(query, limit), indent=2, default=str)
+            return _dumps({"error": f"unknown action '{action}'",
                                "valid_actions": ["list", "performance", "rotation",
                                                  "constituents", "compare", "search"]}, indent=2)
         except Exception as e:
-            return json.dumps({"error": f"{type(e).__name__}: {e}", "action": a}, indent=2)
+            return _dumps({"error": f"{type(e).__name__}: {e}", "action": a}, indent=2)

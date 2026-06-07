@@ -5,7 +5,7 @@ ONE configurable tool (`quant`) replaces the five former narrow quant tools.
 Each `analysis` branch reuses the exact same pure-computation function the old
 wrappers called, from finstack.data.quant_engine (and the SMA-crossover
 backtest from finstack.data.analytics). Each branch returns
-json.dumps(result, indent=2, default=str).
+_dumps(result, indent=2, default=str).
 
 analysis values:
   - risk         -> compute_risk_metrics(symbol)        (per-symbol; runs each)
@@ -17,6 +17,7 @@ analysis values:
 """
 
 import json
+from finstack.utils.respond import dumps as _dumps
 
 from finstack.data.quant_engine import (
     compute_risk_metrics,
@@ -100,7 +101,7 @@ def register_quant_tools(mcp):
         """
         op = analysis.strip().lower()
         if op not in VALID_ANALYSES:
-            return json.dumps({
+            return _dumps({
                 "error": f"Unknown analysis '{analysis}'.",
                 "valid_analyses": VALID_ANALYSES,
             }, indent=2)
@@ -116,26 +117,26 @@ def register_quant_tools(mcp):
             result = optimize_portfolio(
                 symbol_list, objective=objective, period=_period("1y")
             )
-            return json.dumps(result, indent=2, default=str)
+            return _dumps(result, indent=2, default=str)
 
         if op == "correlation":
             result = correlation_matrix(symbol_list, period=_period("1y"))
-            return json.dumps(result, indent=2, default=str)
+            return _dumps(result, indent=2, default=str)
 
         # --- Pair analysis ---
         if op == "pairs":
             s1 = symbol1.strip() or (symbol_list[0] if len(symbol_list) >= 1 else "")
             s2 = symbol2.strip() or (symbol_list[1] if len(symbol_list) >= 2 else "")
             if not s1 or not s2:
-                return json.dumps({
+                return _dumps({
                     "error": "pairs needs two symbols (symbol1/symbol2, or two in `symbols`).",
                 }, indent=2)
             result = pairs_cointegration(s1, s2, period=_period("2y"))
-            return json.dumps(result, indent=2, default=str)
+            return _dumps(result, indent=2, default=str)
 
         # --- Per-symbol analyses (run for each symbol, isolate failures) ---
         if not symbol_list:
-            return json.dumps({"error": "No symbols provided."}, indent=2)
+            return _dumps({"error": "No symbols provided."}, indent=2)
 
         if op == "risk":
             def _one(sym):
@@ -157,7 +158,7 @@ def register_quant_tools(mcp):
                     initial_capital=initial_capital,
                 )
         else:  # defensive — should be unreachable given the guard above
-            return json.dumps({
+            return _dumps({
                 "error": f"Unhandled analysis '{analysis}'.",
                 "valid_analyses": VALID_ANALYSES,
             }, indent=2)
@@ -174,4 +175,4 @@ def register_quant_tools(mcp):
             "count": len(results),
             "results": results,
         }
-        return json.dumps(out, indent=2, default=str)
+        return _dumps(out, indent=2, default=str)

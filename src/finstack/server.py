@@ -18,6 +18,7 @@ from finstack.tools.optionsx import register_optionsx_tools
 from finstack.tools.analyzex import register_analyzex_tools
 from finstack.tools.quant import register_quant_tools
 from finstack.tools.pro import register_pro_tools
+from finstack.tools.models import register_models_tools
 from finstack.tools.batch import register_batch_tools
 from finstack.tools.tax import register_tax_tools
 from finstack.tools.charts import register_charts_tools
@@ -143,7 +144,8 @@ register_corporate_tools(mcp)    # corporate_intel
 register_optionsx_tools(mcp)     # options
 register_analyzex_tools(mcp)     # analyze, portfolio
 register_quant_tools(mcp)        # quant
-register_pro_tools(mcp)          # macro, valuation, forensic_diagnostics
+register_pro_tools(mcp)          # macro
+register_models_tools(mcp)       # models (valuation + forensic, merged)
 register_batch_tools(mcp)        # batch_analyze
 register_charts_tools(mcp)       # chart_data
 register_sector_tools(mcp)       # sector (themes/baskets/universe)
@@ -170,8 +172,7 @@ def finstack_info() -> str:
         "analyze": "Multi-agent brief/score/timeline/divergence/pump/sentiment/earnings/etc. Args: symbol, lenses.",
         "portfolio": "Portfolio X-ray (P&L, risk, concentration). Args: holdings.",
         "quant": "Risk metrics/optimize/GARCH vol/correlation/pairs/backtest. Args: symbols, analysis.",
-        "valuation": "DCF, reverse-DCF, Graham, owner-earnings, EPV (you supply inputs).",
-        "forensic_diagnostics": "Beneish-M, Altman-Z, Piotroski-F, Sloan, DuPont, Merton-DD (you supply inputs).",
+        "models": "Computation-first financial models you supply data to: DCF, reverse-DCF, Graham, owner-earnings, EPV, Beneish-M, Altman-Z, Piotroski-F, Sloan, DuPont, Merton-DD.",
         "macro": "Live key-free macro (World Bank/DBnomics) with as_of/source/is_stale stamps.",
         "batch_analyze": "Run any per-symbol analysis across many tickers concurrently.",
         "calculate_tax_liability": "Indian LTCG/STCG tax on an equity/MF trade.",

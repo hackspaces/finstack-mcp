@@ -22,6 +22,7 @@ Failures are isolated per statement so one bad branch never fails the whole call
 """
 
 import json
+from finstack.utils.respond import dumps as _dumps
 
 from finstack.data.fundamentals import (
     get_income_statement,
@@ -91,7 +92,7 @@ def register_funda_tools(mcp):
         # validate up front; unknown -> fail loud listing valid statements
         unknown = [s for s in requested if s not in STATEMENT_OPS]
         if unknown:
-            return json.dumps({
+            return _dumps({
                 "error": f"Unknown statement(s): {unknown}.",
                 "valid_statements": sorted(STATEMENT_OPS.keys()),
             }, indent=2)
@@ -101,7 +102,7 @@ def register_funda_tools(mcp):
         ordered = [s for s in requested if not (s in seen or seen.add(s))]
 
         if not ordered:
-            return json.dumps({
+            return _dumps({
                 "error": "No statements requested.",
                 "valid_statements": sorted(STATEMENT_OPS.keys()),
             }, indent=2)
@@ -119,4 +120,4 @@ def register_funda_tools(mcp):
             "count": len(ordered),
             "results": results,
         }
-        return json.dumps(out, indent=2, default=str)
+        return _dumps(out, indent=2, default=str)

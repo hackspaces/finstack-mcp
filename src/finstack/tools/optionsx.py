@@ -16,6 +16,7 @@ Views and the underlying calls they reuse:
 """
 
 import json
+from finstack.utils.respond import dumps as _dumps
 
 from finstack.data.nse_advanced import get_options_chain
 from finstack.data.market_intelligence import (
@@ -114,7 +115,7 @@ def register_optionsx_tools(mcp):
 
         unknown = [v for v in requested if v not in OPTIONS_VIEWS]
         if unknown:
-            return json.dumps({
+            return _dumps({
                 "error": f"Unknown view(s): {', '.join(unknown)}.",
                 "valid_views": sorted(OPTIONS_VIEWS.keys()),
             }, indent=2)
@@ -138,4 +139,4 @@ def register_optionsx_tools(mcp):
         }
         if "pcr" in ordered_views:
             out["note"] = "The 'pcr' view is NIFTY-index only and ignores `symbol`."
-        return json.dumps(out, indent=2, default=str)
+        return _dumps(out, indent=2, default=str)
