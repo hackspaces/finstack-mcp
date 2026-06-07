@@ -295,7 +295,7 @@ def get_company_profile(symbol: str) -> dict:
             "exchange": safe_get(info, "exchange"),
             "currency": safe_get(info, "currency"),
             "market_cap": safe_get(info, "marketCap"),
-            "market_cap_formatted": format_market_cap(safe_get(info, "marketCap")),
+            "market_cap_formatted": format_market_cap(safe_get(info, "marketCap"), safe_get(info, "currency", default="USD")),
             "timestamp": datetime.now().isoformat(),
         }
 

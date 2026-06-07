@@ -108,16 +108,18 @@ def get_nse_quote(symbol: str) -> dict:
             "volume": safe_get(info, "regularMarketVolume"),
             "avg_volume": safe_get(info, "averageDailyVolume10Day"),
             "market_cap": safe_get(info, "marketCap"),
-            "market_cap_formatted": format_market_cap(safe_get(info, "marketCap")),
+            "market_cap_formatted": format_market_cap(
+                safe_get(info, "marketCap"), safe_get(info, "currency", default="INR")
+            ),
             "fifty_two_week_high": safe_get(info, "fiftyTwoWeekHigh"),
             "fifty_two_week_low": safe_get(info, "fiftyTwoWeekLow"),
             "pe_ratio": safe_get(info, "trailingPE"),
             "forward_pe": safe_get(info, "forwardPE"),
             "pb_ratio": safe_get(info, "priceToBook"),
             "dividend_yield": safe_get(info, "dividendYield"),
-            "dividend_yield_pct": format_percentage(
-                (safe_get(info, "dividendYield") or 0) * 100
-            ),
+            # yfinance now returns dividendYield already as a percentage
+            # (e.g. 6.99 == 6.99%), so do NOT multiply by 100 again.
+            "dividend_yield_pct": format_percentage(safe_get(info, "dividendYield")),
             "sector": safe_get(info, "sector"),
             "industry": safe_get(info, "industry"),
             "timestamp": datetime.now().isoformat(),
@@ -165,7 +167,9 @@ def get_bse_quote(symbol: str) -> dict:
             "prev_close": safe_get(info, "regularMarketPreviousClose"),
             "volume": safe_get(info, "regularMarketVolume"),
             "market_cap": safe_get(info, "marketCap"),
-            "market_cap_formatted": format_market_cap(safe_get(info, "marketCap")),
+            "market_cap_formatted": format_market_cap(
+                safe_get(info, "marketCap"), safe_get(info, "currency", default="INR")
+            ),
             "fifty_two_week_high": safe_get(info, "fiftyTwoWeekHigh"),
             "fifty_two_week_low": safe_get(info, "fiftyTwoWeekLow"),
             "pe_ratio": safe_get(info, "trailingPE"),

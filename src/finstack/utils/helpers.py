@@ -123,24 +123,41 @@ def format_number(value: Any, decimals: int = 2) -> str | None:
         return None
 
 
-def format_market_cap(value: Any) -> str | None:
-    """Format market cap in a readable way (supports both INR and USD)."""
+def format_market_cap(value: Any, currency: str = "USD") -> str | None:
+    """Format market cap in a readable way, respecting the listing currency.
+
+    Indian listings report market cap in INR, so they are shown in the Indian
+    crore / lakh-crore scale with a ₹ sign rather than a misleading "$…T".
+    """
     if value is None:
         return None
     try:
         num = float(value)
-        if abs(num) >= 1e12:
-            return f"${num / 1e12:.2f}T"
-        elif abs(num) >= 1e9:
-            return f"${num / 1e9:.2f}B"
-        elif abs(num) >= 1e6:
-            return f"${num / 1e6:.2f}M"
-        elif abs(num) >= 1e3:
-            return f"${num / 1e3:.2f}K"
-        else:
-            return f"${num:.2f}"
     except (ValueError, TypeError):
         return None
+
+    if currency == "INR":
+        if abs(num) >= 1e12:
+            return f"₹{num / 1e12:.2f} Lakh Cr"
+        elif abs(num) >= 1e7:
+            return f"₹{num / 1e7:.2f} Cr"
+        elif abs(num) >= 1e5:
+            return f"₹{num / 1e5:.2f} Lakh"
+        else:
+            return f"₹{num:.2f}"
+
+    symbols = {"USD": "$", "EUR": "€", "GBP": "£", "JPY": "¥", "HKD": "HK$"}
+    prefix = symbols.get(currency, f"{currency} " if currency else "$")
+    if abs(num) >= 1e12:
+        return f"{prefix}{num / 1e12:.2f}T"
+    elif abs(num) >= 1e9:
+        return f"{prefix}{num / 1e9:.2f}B"
+    elif abs(num) >= 1e6:
+        return f"{prefix}{num / 1e6:.2f}M"
+    elif abs(num) >= 1e3:
+        return f"{prefix}{num / 1e3:.2f}K"
+    else:
+        return f"{prefix}{num:.2f}"
 
 
 def format_percentage(value: Any, decimals: int = 2) -> str | None:
