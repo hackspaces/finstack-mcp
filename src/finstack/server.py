@@ -20,6 +20,7 @@ from finstack.tools.quant import register_quant_tools
 from finstack.tools.pro import register_pro_tools
 from finstack.tools.batch import register_batch_tools
 from finstack.tools.tax import register_tax_tools
+from finstack.tools.charts import register_charts_tools
 
 config.setup_logging()
 logger = logging.getLogger("finstack")
@@ -143,6 +144,7 @@ register_analyzex_tools(mcp)     # analyze, portfolio
 register_quant_tools(mcp)        # quant
 register_pro_tools(mcp)          # macro, valuation, forensic_diagnostics
 register_batch_tools(mcp)        # batch_analyze
+register_charts_tools(mcp)       # chart_data
 register_tax_tools(mcp)          # calculate_tax_liability
 
 
@@ -171,6 +173,7 @@ def finstack_info() -> str:
         "macro": "Live key-free macro (World Bank/DBnomics) with as_of/source/is_stale stamps.",
         "batch_analyze": "Run any per-symbol analysis across many tickers concurrently.",
         "calculate_tax_liability": "Indian LTCG/STCG tax on an equity/MF trade.",
+        "chart_data": "Plot-ready data for interactive charts (price/candlestick/comparison/drawdown/heatmap/frontier/...).",
     }
     return json.dumps(
         {
