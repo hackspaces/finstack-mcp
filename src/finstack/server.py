@@ -202,11 +202,11 @@ def main() -> None:
         return
 
     if transport in ("http", "streamable-http"):
-        mcp.run(
-            transport="streamable-http",
-            host=config.host,
-            port=config.port,
-        )
+        # FastMCP.run() no longer accepts host/port kwargs (mcp >= ~1.8);
+        # configure them on the settings object before starting.
+        mcp.settings.host = config.host
+        mcp.settings.port = config.port
+        mcp.run(transport="streamable-http")
         return
 
     logger.error("Unknown transport: %s", transport)
