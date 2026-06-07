@@ -30,6 +30,11 @@ from finstack.tools.screener_pro import register_screener_pro_tools
 from finstack.tools.risk_report import register_risk_report_tools
 from finstack.tools.regime import register_regime_tools
 from finstack.tools.relval import register_relval_tools
+from finstack.tools.options_strategy import register_options_strategy_tools
+from finstack.tools.day_trade import register_day_trade_tools
+from finstack.tools.news import register_news_tools
+from finstack.tools.earnings_playbook import register_earnings_playbook_tools
+from finstack.tools.alerts import register_alerts_tools
 
 config.setup_logging()
 logger = logging.getLogger("finstack")
@@ -163,6 +168,11 @@ register_screener_pro_tools(mcp) # screen_pro (multi-factor alpha screens)
 register_risk_report_tools(mcp)  # risk_report (portfolio X-ray)
 register_regime_tools(mcp)       # market_regime
 register_relval_tools(mcp)       # relative_value (stat-arb pairs)
+register_options_strategy_tools(mcp)  # options_strategy
+register_day_trade_tools(mcp)    # day_trade (intraday)
+register_news_tools(mcp)         # news (RSS catalyst feed)
+register_earnings_playbook_tools(mcp) # earnings_playbook
+register_alerts_tools(mcp)       # alerts (watchlist scanner)
 register_tax_tools(mcp)          # calculate_tax_liability
 
 
@@ -197,6 +207,11 @@ def finstack_info() -> str:
         "risk_report": "Portfolio X-ray: sector exposure, concentration, correlation, VaR/CVaR/beta/drawdown, flags.",
         "market_regime": "Top-down RISK_ON/OFF read: macro+Nifty trend+India VIX+sector rotation -> regime + sector tilts.",
         "relative_value": "Stat-arb pair finder: cointegration across a basket -> ranked tradeable pairs with z-score+signal.",
+        "options_strategy": "Build options strategies (covered call/spreads/straddle/iron condor) — payoff curve, max P/L, breakevens, net Greeks (Black-Scholes).",
+        "day_trade": "Intraday card: VWAP, opening-range breakout, intraday ATR stop, targets, sizing (square off by close).",
+        "news": "Datacenter-safe RSS catalyst feed (Google News + Yahoo + SEBI) for a symbol or topic.",
+        "earnings_playbook": "Around results: next date, historical reaction, expected-move band, positioning.",
+        "alerts": "Watchlist scanner: breakouts, RVOL spikes, RSI extremes, crosses, support/resistance triggers.",
         "technicals": "Full TA: indicators (RSI/MACD/Bollinger/ADX/...), signals (crosses/squeeze/ob-os), support/resistance/pivots, composite bull/bear bias.",
         "sector": "~120 sector/thematic baskets + full ~2.1k NSE universe: performance/rotation/constituents/compare/search; custom & combinatorial baskets.",
     }
