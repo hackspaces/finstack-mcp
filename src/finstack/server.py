@@ -21,6 +21,7 @@ from finstack.tools.pro import register_pro_tools
 from finstack.tools.batch import register_batch_tools
 from finstack.tools.tax import register_tax_tools
 from finstack.tools.charts import register_charts_tools
+from finstack.tools.sector import register_sector_tools
 
 config.setup_logging()
 logger = logging.getLogger("finstack")
@@ -145,6 +146,7 @@ register_quant_tools(mcp)        # quant
 register_pro_tools(mcp)          # macro, valuation, forensic_diagnostics
 register_batch_tools(mcp)        # batch_analyze
 register_charts_tools(mcp)       # chart_data
+register_sector_tools(mcp)       # sector (themes/baskets/universe)
 register_tax_tools(mcp)          # calculate_tax_liability
 
 
@@ -174,6 +176,7 @@ def finstack_info() -> str:
         "batch_analyze": "Run any per-symbol analysis across many tickers concurrently.",
         "calculate_tax_liability": "Indian LTCG/STCG tax on an equity/MF trade.",
         "chart_data": "Plot-ready data for interactive charts (price/candlestick/comparison/drawdown/heatmap/frontier/...).",
+        "sector": "~120 sector/thematic baskets + full ~2.1k NSE universe: performance/rotation/constituents/compare/search; custom & combinatorial baskets.",
     }
     return json.dumps(
         {
