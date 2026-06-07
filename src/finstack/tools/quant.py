@@ -1,16 +1,19 @@
 """
-FinStack Quant Analytics Tools
+FinStack Quant Analytics Tools — consolidated, configurable.
 
-Quant toolset built on real Python quant libraries (numpy, pandas, scipy,
-statsmodels, arch). Each tool wraps a pure computation function from
-finstack.data.quant_engine and returns a JSON string.
+ONE configurable tool (`quant`) replaces the five former narrow quant tools.
+Each `analysis` branch reuses the exact same pure-computation function the old
+wrappers called, from finstack.data.quant_engine (and the SMA-crossover
+backtest from finstack.data.analytics). Each branch returns
+json.dumps(result, indent=2, default=str).
 
-Tools:
-  - quant_risk_metrics        - risk profile (Sharpe/Sortino/VaR/beta) vs a benchmark
-  - quant_optimize_portfolio  - long-only mean-variance optimization
-  - quant_volatility_forecast - GARCH(1,1) volatility forecast
-  - quant_correlation_matrix  - correlation matrix + diversification note
-  - quant_pairs_trade         - cointegration test + pairs-trading signal
+analysis values:
+  - risk         -> compute_risk_metrics(symbol)        (per-symbol; runs each)
+  - optimize     -> optimize_portfolio(symbol_list)
+  - vol_forecast -> forecast_volatility(symbol)         (per-symbol; runs each)
+  - correlation  -> correlation_matrix(symbol_list)
+  - pairs        -> pairs_cointegration(symbol1, symbol2)
+  - backtest     -> backtest_sma_crossover(symbol)      (per-symbol; runs each)
 """
 
 import json
@@ -22,125 +25,153 @@ from finstack.data.quant_engine import (
     correlation_matrix,
     pairs_cointegration,
 )
+from finstack.data.analytics import backtest_sma_crossover
+
+VALID_ANALYSES = [
+    "risk",
+    "optimize",
+    "vol_forecast",
+    "correlation",
+    "pairs",
+    "backtest",
+]
 
 
 def register_quant_tools(mcp):
-    """Register quant analytics tools with the MCP server."""
+    """Register the consolidated quant analytics tool with the MCP server."""
 
     @mcp.tool()
-    def quant_risk_metrics(
-        symbol: str,
-        benchmark: str = "^NSEI",
-        period: str = "1y",
-    ) -> str:
-        """Compute a quantitative risk profile for an NSE stock vs a benchmark.
-
-        Returns annualized return & volatility, Sharpe and Sortino ratios, max
-        drawdown, historical 95% VaR & CVaR, and beta & alpha vs the benchmark
-        (OLS regression of daily returns).
-
-        Args:
-            symbol: NSE symbol (e.g. RELIANCE, TCS, HDFCBANK); ".NS" is appended.
-            benchmark: benchmark ticker, default Nifty 50 ("^NSEI").
-            period: history window (e.g. "1y", "2y").
-
-        Returns:
-            JSON string of metrics, or an object with an "error" key on failure.
-
-        Example:
-            quant_risk_metrics(symbol="RELIANCE", benchmark="^NSEI", period="1y")
-        """
-        result = compute_risk_metrics(symbol, benchmark=benchmark, period=period)
-        return json.dumps(result, indent=2, default=str)
-
-    @mcp.tool()
-    def quant_optimize_portfolio(
+    def quant(
         symbols: str,
+        analysis: str = "risk",
+        benchmark: str = "^NSEI",
+        period: str = "",
         objective: str = "max_sharpe",
-        period: str = "1y",
+        horizon: int = 5,
+        symbol1: str = "",
+        symbol2: str = "",
+        short_window: int = 20,
+        long_window: int = 50,
+        initial_capital: float = 100000,
     ) -> str:
-        """Optimize a long-only equity portfolio (mean-variance, scipy).
+        """Configurable quantitative analytics on NSE equities (one tool, many modes).
 
-        Computes optimal weights (summing to 1, each 0..1) for the given objective
-        and reports expected annual return, annual volatility and Sharpe ratio.
+        Built on numpy/pandas/scipy/statsmodels/arch. Pass `symbols` (comma-separated)
+        and pick an `analysis`. Per-symbol analyses (risk, vol_forecast, backtest)
+        run over every symbol with failures isolated per ticker. Basket analyses
+        (optimize, correlation) take the full list. `pairs` uses symbol1/symbol2
+        (falling back to the first two of `symbols`).
 
         Args:
-            symbols: comma-separated NSE symbols (e.g. "RELIANCE,TCS,HDFCBANK").
-            objective: "max_sharpe" or "min_vol".
-            period: history window (e.g. "1y", "2y").
+            symbols: comma-separated NSE symbols, e.g. "RELIANCE,TCS,HDFCBANK"
+                     (".NS" is appended automatically).
+            analysis: which analysis to run. One of:
+                - risk         risk profile (annualized return/vol, Sharpe, Sortino,
+                               max drawdown, VaR/CVaR, beta & alpha vs benchmark)
+                - optimize     long-only mean-variance portfolio optimization
+                - vol_forecast GARCH(1,1) volatility forecast
+                - correlation  return-correlation matrix + diversification note
+                - pairs        cointegration test + pairs-trading signal
+                - backtest     SMA crossover backtest vs buy-and-hold
+            benchmark: benchmark ticker for `risk` (default Nifty 50 "^NSEI").
+            period: history window (e.g. "1y", "2y"). Empty -> sensible per-analysis
+                    default ("1y" for risk/optimize/correlation, "2y" for
+                    vol_forecast/pairs/backtest).
+            objective: for `optimize` — "max_sharpe" or "min_vol".
+            horizon: for `vol_forecast` — forecast horizon in trading days (default 5).
+            symbol1: for `pairs` — dependent leg (else symbols[0]).
+            symbol2: for `pairs` — hedge leg (else symbols[1]).
+            short_window: for `backtest` — short SMA window (default 20).
+            long_window: for `backtest` — long SMA window (default 50).
+            initial_capital: for `backtest` — starting capital (default 100000).
 
         Returns:
-            JSON string with weights and portfolio stats, or an "error" object.
+            JSON string. Unknown `analysis` -> {"error": ..., "valid_analyses": [...]}.
+            Per-symbol analyses return {analysis, count, results: {symbol: <result>}};
+            a ticker that errors gets {"error": "..."} under its key.
 
-        Example:
-            quant_optimize_portfolio(symbols="RELIANCE,TCS,HDFCBANK",
-                                     objective="max_sharpe", period="1y")
+        Examples:
+            quant(symbols="RELIANCE", analysis="risk", benchmark="^NSEI", period="1y")
+            quant(symbols="RELIANCE,TCS,HDFCBANK", analysis="optimize", objective="max_sharpe")
+            quant(symbols="HDFCBANK", analysis="vol_forecast", horizon=5)
+            quant(symbols="RELIANCE,TCS,HDFCBANK", analysis="correlation", period="1y")
+            quant(symbols="HDFCBANK,ICICIBANK", analysis="pairs", period="2y")
+            quant(symbols="RELIANCE", analysis="backtest", short_window=20, long_window=50)
         """
+        op = analysis.strip().lower()
+        if op not in VALID_ANALYSES:
+            return json.dumps({
+                "error": f"Unknown analysis '{analysis}'.",
+                "valid_analyses": VALID_ANALYSES,
+            }, indent=2)
+
         symbol_list = [s.strip() for s in symbols.split(",") if s.strip()]
-        result = optimize_portfolio(symbol_list, objective=objective, period=period)
-        return json.dumps(result, indent=2, default=str)
 
-    @mcp.tool()
-    def quant_volatility_forecast(symbol: str, horizon: int = 5) -> str:
-        """Forecast volatility for an NSE stock using a GARCH(1,1) model (arch).
+        # Per-analysis default period (empty string -> mode default).
+        def _period(default: str) -> str:
+            return period.strip() if period.strip() else default
 
-        Reports the current annualized volatility and the annualized volatility
-        forecast `horizon` trading days ahead.
+        # --- Basket analyses (take the whole list) ---
+        if op == "optimize":
+            result = optimize_portfolio(
+                symbol_list, objective=objective, period=_period("1y")
+            )
+            return json.dumps(result, indent=2, default=str)
 
-        Args:
-            symbol: NSE symbol (e.g. RELIANCE, TCS, HDFCBANK).
-            horizon: forecast horizon in trading days (default 5).
+        if op == "correlation":
+            result = correlation_matrix(symbol_list, period=_period("1y"))
+            return json.dumps(result, indent=2, default=str)
 
-        Returns:
-            JSON string with current and forecast volatility, or an "error" object.
+        # --- Pair analysis ---
+        if op == "pairs":
+            s1 = symbol1.strip() or (symbol_list[0] if len(symbol_list) >= 1 else "")
+            s2 = symbol2.strip() or (symbol_list[1] if len(symbol_list) >= 2 else "")
+            if not s1 or not s2:
+                return json.dumps({
+                    "error": "pairs needs two symbols (symbol1/symbol2, or two in `symbols`).",
+                }, indent=2)
+            result = pairs_cointegration(s1, s2, period=_period("2y"))
+            return json.dumps(result, indent=2, default=str)
 
-        Example:
-            quant_volatility_forecast(symbol="HDFCBANK", horizon=5)
-        """
-        result = forecast_volatility(symbol, horizon=horizon)
-        return json.dumps(result, indent=2, default=str)
+        # --- Per-symbol analyses (run for each symbol, isolate failures) ---
+        if not symbol_list:
+            return json.dumps({"error": "No symbols provided."}, indent=2)
 
-    @mcp.tool()
-    def quant_correlation_matrix(symbols: str, period: str = "1y") -> str:
-        """Compute the return-correlation matrix for a basket of NSE stocks.
+        if op == "risk":
+            def _one(sym):
+                return compute_risk_metrics(
+                    sym, benchmark=benchmark, period=_period("1y")
+                )
+        elif op == "vol_forecast":
+            def _one(sym):
+                return forecast_volatility(
+                    sym, horizon=horizon, period=_period("2y")
+                )
+        elif op == "backtest":
+            def _one(sym):
+                return backtest_sma_crossover(
+                    sym,
+                    short_window=short_window,
+                    long_window=long_window,
+                    period=_period("2y"),
+                    initial_capital=initial_capital,
+                )
+        else:  # defensive — should be unreachable given the guard above
+            return json.dumps({
+                "error": f"Unhandled analysis '{analysis}'.",
+                "valid_analyses": VALID_ANALYSES,
+            }, indent=2)
 
-        Returns the full correlation matrix, the average pairwise correlation and
-        a plain-language diversification note.
+        results: dict[str, object] = {}
+        for sym in symbol_list:
+            try:
+                results[sym] = _one(sym)
+            except Exception as e:  # isolate per-symbol failures
+                results[sym] = {"error": f"{type(e).__name__}: {e}"}
 
-        Args:
-            symbols: comma-separated NSE symbols (e.g. "RELIANCE,TCS,HDFCBANK").
-            period: history window (e.g. "1y", "2y").
-
-        Returns:
-            JSON string with the matrix and diversification note, or an "error".
-
-        Example:
-            quant_correlation_matrix(symbols="RELIANCE,TCS,HDFCBANK", period="1y")
-        """
-        symbol_list = [s.strip() for s in symbols.split(",") if s.strip()]
-        result = correlation_matrix(symbol_list, period=period)
-        return json.dumps(result, indent=2, default=str)
-
-    @mcp.tool()
-    def quant_pairs_trade(symbol1: str, symbol2: str, period: str = "2y") -> str:
-        """Test two NSE stocks for cointegration and emit a pairs-trading signal.
-
-        Runs an Engle-Granger cointegration test (statsmodels), estimates the OLS
-        hedge ratio, computes the current spread z-score and returns a signal
-        (LONG_SPREAD / SHORT_SPREAD / NEUTRAL) plus a "cointegrated" boolean
-        (p < 0.05).
-
-        Args:
-            symbol1: first NSE symbol, the dependent leg (e.g. HDFCBANK).
-            symbol2: second NSE symbol, the hedge leg (e.g. ICICIBANK).
-            period: history window (e.g. "2y").
-
-        Returns:
-            JSON string with p-value, hedge ratio, z-score and signal, or an
-            "error" object on failure.
-
-        Example:
-            quant_pairs_trade(symbol1="HDFCBANK", symbol2="ICICIBANK", period="2y")
-        """
-        result = pairs_cointegration(symbol1, symbol2, period=period)
-        return json.dumps(result, indent=2, default=str)
+        out = {
+            "analysis": op,
+            "count": len(results),
+            "results": results,
+        }
+        return json.dumps(out, indent=2, default=str)

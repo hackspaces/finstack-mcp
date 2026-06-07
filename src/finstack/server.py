@@ -6,23 +6,20 @@ import sys
 from mcp.server.fastmcp import FastMCP
 
 from finstack.config import config
-from finstack.tools.indian import register_indian_tools
-from finstack.tools.analytics import register_analytics_tools
-from finstack.tools.fundamentals import register_fundamental_tools
-from finstack.tools.global_ import register_global_tools
-from finstack.tools.tax import register_tax_tools
-from finstack.tools.market_intelligence import register_market_intelligence_tools
-from finstack.tools.broker_credit_esg import register_broker_credit_esg_tools
-from finstack.tools.brokers import register_broker_tools
-from finstack.tools.sentiment import register_sentiment_tools
-from finstack.tools.agents import register_agent_tools
-from finstack.tools.smart_money import register_smart_money_tools
-from finstack.tools.probability import register_probability_tools
-from finstack.tools.intelligence import register_intelligence_tools
-from finstack.tools.phase4 import register_phase4_tools
+# Compressed, Claude-first tool surface: a few configurable umbrella tools that
+# reuse the same data layer the old ~90 narrow tools used. Legacy tool modules
+# remain on disk (their data fns are reused) but are no longer registered.
+from finstack.tools.quote import register_quote_tools
+from finstack.tools.history import register_history_tools
+from finstack.tools.funda import register_funda_tools
+from finstack.tools.pulse import register_pulse_tools
+from finstack.tools.corporate import register_corporate_tools
+from finstack.tools.optionsx import register_optionsx_tools
+from finstack.tools.analyzex import register_analyzex_tools
 from finstack.tools.quant import register_quant_tools
-from finstack.tools.batch import register_batch_tools
 from finstack.tools.pro import register_pro_tools
+from finstack.tools.batch import register_batch_tools
+from finstack.tools.tax import register_tax_tools
 
 config.setup_logging()
 logger = logging.getLogger("finstack")
@@ -136,23 +133,17 @@ TOTAL_TOOLS = len(TOOL_CATALOG) + 1
 
 mcp = FastMCP("FinStack")
 
-register_indian_tools(mcp)
-register_global_tools(mcp)
-register_fundamental_tools(mcp)
-register_analytics_tools(mcp)
-register_tax_tools(mcp)
-register_market_intelligence_tools(mcp)
-register_broker_credit_esg_tools(mcp)
-register_broker_tools(mcp)
-register_sentiment_tools(mcp)
-register_agent_tools(mcp)
-register_smart_money_tools(mcp)
-register_probability_tools(mcp)
-register_intelligence_tools(mcp)
-register_phase4_tools(mcp)
-register_quant_tools(mcp)
-register_batch_tools(mcp)
-register_pro_tools(mcp)
+register_quote_tools(mcp)        # market_quote
+register_history_tools(mcp)      # history
+register_funda_tools(mcp)        # fundamentals
+register_pulse_tools(mcp)        # market_pulse, screen, funds
+register_corporate_tools(mcp)    # corporate_intel
+register_optionsx_tools(mcp)     # options
+register_analyzex_tools(mcp)     # analyze, portfolio
+register_quant_tools(mcp)        # quant
+register_pro_tools(mcp)          # macro, valuation, forensic_diagnostics
+register_batch_tools(mcp)        # batch_analyze
+register_tax_tools(mcp)          # calculate_tax_liability
 
 
 @mcp.tool()
@@ -162,14 +153,33 @@ def finstack_info() -> str:
 
     from finstack import __version__
 
+    # Compressed, Claude-first surface: a few configurable umbrella tools.
+    tools = {
+        "market_quote": "Live quotes/index/compare/support-resistance. Args: symbols (comma list), view, market.",
+        "history": "Historical OHLCV. Args: symbols, period, interval, market.",
+        "fundamentals": "Income/balance/cashflow/ratios/profile/dividends/technicals. Args: symbol, statements.",
+        "market_pulse": "Market breadth: status/movers/circuit/fii_dii/bulk/sector/vix/gift/pcr/... Args: views.",
+        "screen": "Stock screener by P/E, ROE, market cap, sector, etc.",
+        "funds": "Mutual funds. Args: action=nav|overlap|flows.",
+        "corporate_intel": "Insider/promoter/pledge/credit/esg/sebi/agm. Args: symbol, kinds.",
+        "options": "Option chain/OI/greeks/PCR/max-pain. Args: symbol, views.",
+        "analyze": "Multi-agent brief/score/timeline/divergence/pump/sentiment/earnings/etc. Args: symbol, lenses.",
+        "portfolio": "Portfolio X-ray (P&L, risk, concentration). Args: holdings.",
+        "quant": "Risk metrics/optimize/GARCH vol/correlation/pairs/backtest. Args: symbols, analysis.",
+        "valuation": "DCF, reverse-DCF, Graham, owner-earnings, EPV (you supply inputs).",
+        "forensic_diagnostics": "Beneish-M, Altman-Z, Piotroski-F, Sloan, DuPont, Merton-DD (you supply inputs).",
+        "macro": "Live key-free macro (World Bank/DBnomics) with as_of/source/is_stale stamps.",
+        "batch_analyze": "Run any per-symbol analysis across many tickers concurrently.",
+        "calculate_tax_liability": "Indian LTCG/STCG tax on an equity/MF trade.",
+    }
     return json.dumps(
         {
             "name": "FinStack MCP",
             "version": __version__,
-            "description": "Open-source financial data for AI assistants",
+            "description": "Configurable, Claude-first financial analytics (compressed tool surface)",
             "tier": config.mode.value,
-            "tools_available": len(TOOL_CATALOG),
-            "tools": TOOL_CATALOG,
+            "tools_available": len(tools),
+            "tools": tools,
             "links": {
                 "github": "https://github.com/finstacklabs/finstack-mcp",
                 "website": "https://finstacklabs.github.io/",
