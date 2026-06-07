@@ -20,6 +20,7 @@ from finstack.tools.smart_money import register_smart_money_tools
 from finstack.tools.probability import register_probability_tools
 from finstack.tools.intelligence import register_intelligence_tools
 from finstack.tools.phase4 import register_phase4_tools
+from finstack.tools.quant import register_quant_tools
 
 config.setup_logging()
 logger = logging.getLogger("finstack")
@@ -147,6 +148,7 @@ register_smart_money_tools(mcp)
 register_probability_tools(mcp)
 register_intelligence_tools(mcp)
 register_phase4_tools(mcp)
+register_quant_tools(mcp)
 
 
 @mcp.tool()

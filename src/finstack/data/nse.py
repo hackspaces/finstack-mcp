@@ -73,7 +73,10 @@ def get_nse_quote(symbol: str) -> dict:
         fifty_two_week_low, pe_ratio, pb_ratio, dividend_yield, sector, industry
     """
     symbol = validate_symbol(symbol)
-    yf_symbol = to_nse_symbol(symbol)
+    # Force the NSE suffix so symbols outside the POPULAR list don't resolve to
+    # a foreign ticker (e.g. ATGL -> a USD US ticker instead of Adani Total Gas).
+    base = symbol.replace(".NS", "")
+    yf_symbol = f"{base}.NS"
 
     try:
         ticker = yf.Ticker(yf_symbol)
@@ -92,6 +95,23 @@ def get_nse_quote(symbol: str) -> dict:
                 "message": f"No data found for '{symbol}'. Check if the symbol is correct.",
                 "suggestion": "Use NSE symbols like RELIANCE, TCS, INFY, HDFCBANK"
             }
+
+        # Guard: if yfinance resolved a non-INR security, it is not NSE-listed.
+        if info.get("currency") is not None and info.get("currency") != "INR":
+            return {
+                "error": True,
+                "message": f"'{symbol}' did not resolve to an NSE-listed security (got currency {info.get('currency')}).",
+                "suggestion": "Use the exact NSE symbol, e.g. ATGL, RELIANCE, TCS"
+            }
+
+        trailing_pe = safe_get(info, "trailingPE")
+        last_trade_time = None
+        try:
+            mkt_time = info.get("regularMarketTime")
+            if mkt_time is not None:
+                last_trade_time = datetime.fromtimestamp(mkt_time).isoformat()
+        except Exception:
+            last_trade_time = None
 
         result = {
             "symbol": symbol.replace(".NS", ""),
@@ -114,6 +134,7 @@ def get_nse_quote(symbol: str) -> dict:
             "fifty_two_week_high": safe_get(info, "fiftyTwoWeekHigh"),
             "fifty_two_week_low": safe_get(info, "fiftyTwoWeekLow"),
             "pe_ratio": safe_get(info, "trailingPE"),
+            "pe_trailing_suspect": trailing_pe is not None and trailing_pe > 300,
             "forward_pe": safe_get(info, "forwardPE"),
             "pb_ratio": safe_get(info, "priceToBook"),
             "dividend_yield": safe_get(info, "dividendYield"),
@@ -123,6 +144,7 @@ def get_nse_quote(symbol: str) -> dict:
             "sector": safe_get(info, "sector"),
             "industry": safe_get(info, "industry"),
             "timestamp": datetime.now().isoformat(),
+            "last_trade_time": last_trade_time,
         }
 
         return clean_nan(result)
@@ -140,11 +162,20 @@ def get_nse_quote(symbol: str) -> dict:
 def get_bse_quote(symbol: str) -> dict:
     """Get real-time BSE quote for a stock."""
     symbol = validate_symbol(symbol)
-    yf_symbol = to_bse_symbol(symbol)
+    # Force the BSE suffix so symbols don't resolve to a foreign ticker.
+    base = symbol.replace(".BO", "")
+    yf_symbol = f"{base}.BO"
 
     try:
         ticker = yf.Ticker(yf_symbol)
         info = ticker.info
+
+        if not info or info.get("regularMarketPrice") is None:
+            # Try without .BO suffix (might already be correct)
+            if not yf_symbol.endswith(".BO"):
+                yf_symbol = f"{symbol}.BO"
+                ticker = yf.Ticker(yf_symbol)
+                info = ticker.info
 
         if not info or info.get("regularMarketPrice") is None:
             return {
@@ -152,6 +183,23 @@ def get_bse_quote(symbol: str) -> dict:
                 "message": f"No BSE data found for '{symbol}'.",
                 "suggestion": "BSE symbols: use the stock name (RELIANCE) or BSE code (500325)"
             }
+
+        # Guard: if yfinance resolved a non-INR security, it is not BSE-listed.
+        if info.get("currency") is not None and info.get("currency") != "INR":
+            return {
+                "error": True,
+                "message": f"'{symbol}' did not resolve to a BSE-listed security (got currency {info.get('currency')}).",
+                "suggestion": "Use the exact BSE symbol or code, e.g. RELIANCE or 500325"
+            }
+
+        trailing_pe = safe_get(info, "trailingPE")
+        last_trade_time = None
+        try:
+            mkt_time = info.get("regularMarketTime")
+            if mkt_time is not None:
+                last_trade_time = datetime.fromtimestamp(mkt_time).isoformat()
+        except Exception:
+            last_trade_time = None
 
         result = {
             "symbol": symbol.replace(".BO", ""),
@@ -173,9 +221,11 @@ def get_bse_quote(symbol: str) -> dict:
             "fifty_two_week_high": safe_get(info, "fiftyTwoWeekHigh"),
             "fifty_two_week_low": safe_get(info, "fiftyTwoWeekLow"),
             "pe_ratio": safe_get(info, "trailingPE"),
+            "pe_trailing_suspect": trailing_pe is not None and trailing_pe > 300,
             "sector": safe_get(info, "sector"),
             "industry": safe_get(info, "industry"),
             "timestamp": datetime.now().isoformat(),
+            "last_trade_time": last_trade_time,
         }
 
         return clean_nan(result)
