@@ -24,6 +24,12 @@ from finstack.tools.tax import register_tax_tools
 from finstack.tools.charts import register_charts_tools
 from finstack.tools.sector import register_sector_tools
 from finstack.tools.technicals import register_technicals_tools
+from finstack.tools.dossier import register_dossier_tools
+from finstack.tools.trade import register_trade_tools
+from finstack.tools.screener_pro import register_screener_pro_tools
+from finstack.tools.risk_report import register_risk_report_tools
+from finstack.tools.regime import register_regime_tools
+from finstack.tools.relval import register_relval_tools
 
 config.setup_logging()
 logger = logging.getLogger("finstack")
@@ -151,6 +157,12 @@ register_batch_tools(mcp)        # batch_analyze
 register_charts_tools(mcp)       # chart_data
 register_sector_tools(mcp)       # sector (themes/baskets/universe)
 register_technicals_tools(mcp)   # technicals
+register_dossier_tools(mcp)      # dossier (full equity one-pager)
+register_trade_tools(mcp)        # trade_setup
+register_screener_pro_tools(mcp) # screen_pro (multi-factor alpha screens)
+register_risk_report_tools(mcp)  # risk_report (portfolio X-ray)
+register_regime_tools(mcp)       # market_regime
+register_relval_tools(mcp)       # relative_value (stat-arb pairs)
 register_tax_tools(mcp)          # calculate_tax_liability
 
 
@@ -179,6 +191,12 @@ def finstack_info() -> str:
         "batch_analyze": "Run any per-symbol analysis across many tickers concurrently.",
         "calculate_tax_liability": "Indian LTCG/STCG tax on an equity/MF trade.",
         "chart_data": "Plot-ready data for interactive charts (price/candlestick/comparison/drawdown/heatmap/frontier/...).",
+        "dossier": "One-call institutional one-pager: quote+ratios+technicals+volume+risk+forecast + auto-fed reverse-DCF/Graham/Altman-Z -> scored bull/bear scorecard.",
+        "trade_setup": "Actionable trade card: entry/ATR-stop/targets (R-multiples) + position sizing from your capital & risk %.",
+        "screen_pro": "Multi-factor alpha screens (quality_value/momentum_breakout/mean_reversion/low_vol_quality) across baskets/universe.",
+        "risk_report": "Portfolio X-ray: sector exposure, concentration, correlation, VaR/CVaR/beta/drawdown, flags.",
+        "market_regime": "Top-down RISK_ON/OFF read: macro+Nifty trend+India VIX+sector rotation -> regime + sector tilts.",
+        "relative_value": "Stat-arb pair finder: cointegration across a basket -> ranked tradeable pairs with z-score+signal.",
         "technicals": "Full TA: indicators (RSI/MACD/Bollinger/ADX/...), signals (crosses/squeeze/ob-os), support/resistance/pivots, composite bull/bear bias.",
         "sector": "~120 sector/thematic baskets + full ~2.1k NSE universe: performance/rotation/constituents/compare/search; custom & combinatorial baskets.",
     }
