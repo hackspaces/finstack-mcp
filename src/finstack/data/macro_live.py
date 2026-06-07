@@ -53,16 +53,19 @@ def _is_stale(as_of: str) -> bool:
 
 
 def _wb_latest(indicator: str, country: str) -> dict:
+    # mrv=N (most-recent N values) is far more reliable than mrnev across
+    # indicators; pull a few and pick the latest non-null ourselves.
     url = f"https://api.worldbank.org/v2/country/{country}/indicator/{indicator}"
-    params = {"format": "json", "per_page": "5", "mrnev": "1"}  # most-recent non-empty
     with httpx.Client(timeout=15) as c:
-        r = c.get(url, params=params)
+        r = c.get(url, params={"format": "json", "mrv": "8"})
         r.raise_for_status()
         data = r.json()
     if not isinstance(data, list) or len(data) < 2 or not data[1]:
         return {"value": None, "error": "no data"}
-    row = data[1][0]
-    return {"value": row.get("value"), "as_of": row.get("date")}
+    for row in data[1]:  # newest first
+        if row.get("value") is not None:
+            return {"value": row.get("value"), "as_of": row.get("date")}
+    return {"value": None, "error": "no non-null observation"}
 
 
 def _dbnomics_latest(series_id: str) -> dict:
