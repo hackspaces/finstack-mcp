@@ -167,7 +167,29 @@ def get_fii_retail_divergence(symbol: str) -> dict:
             historical_implication = "No actionable divergence signal at this time."
 
     elif fii_change is None and retail_change is None:
-        interpretation = "Shareholding data unavailable — cannot compute divergence."
+        # No usable shareholding data — fail loud rather than degrading to a clean
+        # NEUTRAL that reads as a genuine "no divergence" result.
+        return {
+            "symbol": symbol,
+            "data_quality": "unavailable",
+            "signal": "DATA_UNAVAILABLE",
+            "confidence": "low",
+            "error": "shareholding_data_unavailable",
+            "message": (
+                "Shareholding data unavailable — cannot compute FII/retail divergence. "
+                "This is not a NEUTRAL signal; no FII, DII or retail change could be read."
+            ),
+            "data": {
+                "fii_holding_pct":    fii_current,
+                "fii_qoq_change":     fii_change,
+                "retail_holding_pct": retail_current,
+                "retail_qoq_change":  retail_change,
+                "dii_qoq_change":     dii_change,
+                "avg_daily_volume":   vol_data.get("avg_daily_volume"),
+            },
+            "generated_at": datetime.now(tz=timezone.utc).isoformat(),
+            "disclaimer": "Not SEBI-registered advice. Based on public shareholding disclosures.",
+        }
 
     # DII addendum
     dii_note = None

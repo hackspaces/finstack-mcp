@@ -515,6 +515,32 @@ AGENT_ANALYZERS = [
 
 # ── Consensus engine ──────────────────────────────────────────────────────────
 
+def _agent_has_no_data(agent: dict) -> bool:
+    """
+    True when an agent's verdict is a null artifact — every data field it relies
+    on came back empty, so its HOLD/score=0 is "no opinion", not "neutral view".
+    """
+    if "data" not in agent:
+        # Round-2/3 debate verdicts carry no raw data dict — not assessable here.
+        return False
+    data = agent.get("data") or {}
+    if not data:
+        return True
+    # Has data if at least one input field carries a real (non-null, non-empty) value.
+    for v in data.values():
+        if v is None:
+            continue
+        if isinstance(v, bool):
+            return False  # a real boolean flag is usable signal
+        if isinstance(v, str) and v.strip().lower() in ("", "neutral"):
+            continue
+        if isinstance(v, (int, float)) and v == 0:
+            # 0 is ambiguous (e.g. fii_net_5d defaults to 0.0 when no data) — skip it.
+            continue
+        return False  # found a usable value → agent has data
+    return True  # no usable value found → null artifact
+
+
 def _build_consensus(agents: list[dict]) -> dict:
     signals = [a["signal"] for a in agents]
     scores  = [a["score"]  for a in agents]
@@ -524,6 +550,9 @@ def _build_consensus(agents: list[dict]) -> dict:
     buys  = signals.count("BUY")
     sells = signals.count("SELL")
     holds = signals.count("HOLD")
+
+    # Count agents whose verdict is a null artifact (no usable input data).
+    no_data = sum(1 for a in agents if _agent_has_no_data(a))
 
     # Majority = more than half (works for 4 or 6 agents)
     majority = n // 2 + 1
@@ -540,7 +569,7 @@ def _build_consensus(agents: list[dict]) -> dict:
 
     disagreement = (buys > 0 and sells > 0)
 
-    return {
+    result = {
         "signal": consensus,
         "strength": strength,
         "votes": {"BUY": buys, "HOLD": holds, "SELL": sells},
@@ -548,6 +577,25 @@ def _build_consensus(agents: list[dict]) -> dict:
         "disagreement": disagreement,
         "note": "Agents disagree — wait for a clearer setup before acting." if disagreement else "",
     }
+
+    # When at least half the agents had no usable data, the "consensus" is a null
+    # artifact, not genuine agreement. Fail loud instead of emitting a clean HOLD.
+    if no_data >= (n + 1) // 2:
+        result["signal"] = "INSUFFICIENT_DATA"
+        result["strength"] = "none"
+        result["data_quality"] = "insufficient"
+        result["confidence"] = "low"
+        result["agents_without_data"] = no_data
+        result["disagreement"] = False
+        result["warning"] = (
+            f"{no_data} of {n} agents had no usable data — this is not a real "
+            f"{consensus} consensus. Treat as data-unavailable, not agreement."
+        )
+    else:
+        result["data_quality"] = "ok"
+        result["agents_without_data"] = no_data
+
+    return result
 
 
 # ── Sequential debate logic ───────────────────────────────────────────────────
@@ -805,6 +853,10 @@ def get_stock_debate(symbol: str) -> dict:
             "strength": final_consensus["strength"],
             "votes":    final_consensus["votes"],
             "avg_score": final_consensus["avg_score"],
+            "data_quality": final_consensus.get("data_quality"),
+            "confidence": final_consensus.get("confidence"),
+            "warning": final_consensus.get("warning"),
+            "agents_without_data": final_consensus.get("agents_without_data"),
             "note": f"{changed} agent(s) changed position during debate. "
                     f"{'Strong conviction.' if final_consensus['strength'] == 'strong' else 'Watch for volatility.'}"
         },

@@ -24,6 +24,9 @@ dependencies = [
     "yfinance>=0.2.40",
     "pandas>=2.0.0",
     "numpy>=1.26.0",
+    "scipy>=1.11.0",
+    "statsmodels>=0.14.0",
+    "arch>=6.3.0",
     "pydantic>=2.0.0",
     "python-dotenv>=1.0.0",
 ]

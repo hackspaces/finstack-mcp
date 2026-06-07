@@ -337,7 +337,8 @@ def get_insider_trading(symbol: str, days: int = 90) -> dict:
     to_date = end_date.strftime("%d-%m-%Y")
     from_date = start_date.strftime("%d-%m-%Y")
 
-    with _nse_session() as client:
+    client = _nse_session()
+    try:
         try:
             resp = client.get(
                 "https://www.nseindia.com/api/corporates-insider-trading",
@@ -383,6 +384,8 @@ def get_insider_trading(symbol: str, days: int = 90) -> dict:
 
         except Exception as e:
             logger.warning("Insider trading fetch failed for %s: %s", symbol, e)
+    finally:
+        client.close()
 
     # Fallback: yfinance institutional holders
     try:
@@ -413,7 +416,8 @@ def get_promoter_shareholding(symbol: str) -> dict:
     """
     symbol = validate_symbol(symbol).replace(".NS", "").replace(".BO", "")
 
-    with _nse_session() as client:
+    client = _nse_session()
+    try:
         try:
             resp = client.get(
                 "https://www.nseindia.com/api/corporate-share-holding-category",
@@ -446,6 +450,8 @@ def get_promoter_shareholding(symbol: str) -> dict:
 
         except Exception as e:
             logger.warning("Shareholding pattern failed for %s (NSE): %s", symbol, e)
+    finally:
+        client.close()
 
     # Fallback: yfinance major holders
     try:
@@ -824,7 +830,8 @@ def get_gift_nifty() -> dict:
         pass
 
     # NSE pre-open session data as GIFT Nifty proxy
-    with _nse_session() as client:
+    client = _nse_session()
+    try:
         try:
             resp = client.get("https://www.nseindia.com/api/market-status")
             if resp.status_code == 200:
@@ -832,6 +839,8 @@ def get_gift_nifty() -> dict:
                 result["market_status"] = data
         except Exception:
             pass
+    finally:
+        client.close()
 
     result["gift_nifty_live"] = {
         "source": "https://www.nseindia.com/market-data/live-market-indices",
@@ -874,7 +883,8 @@ def get_promoter_pledge(symbol: str) -> dict:
     """
     symbol = validate_symbol(symbol).replace(".NS", "").replace(".BO", "")
 
-    with _nse_session() as client:
+    client = _nse_session()
+    try:
         try:
             resp = client.get(
                 "https://www.nseindia.com/api/corporate-share-holding-category",
@@ -929,6 +939,8 @@ def get_promoter_pledge(symbol: str) -> dict:
 
         except Exception as e:
             logger.warning("Promoter pledge fetch failed for %s: %s", symbol, e)
+    finally:
+        client.close()
 
     return {
         "symbol": symbol,
