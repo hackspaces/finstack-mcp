@@ -199,6 +199,60 @@ def efficient_frontier(symbols: list[str], period: str = "2y", n_portfolios: int
     }
 
 
+def volume(symbol: str, period: str = "6mo", interval: str = "1d") -> dict:
+    """Volume bars + 20d average overlay, colored by up/down day."""
+    df = _hist(symbol, period, interval)
+    colors = ["#3CDE66" if df["Close"].iloc[i] >= df["Open"].iloc[i] else "#FF5C5C"
+              for i in range(len(df))]
+    avg = df["Volume"].rolling(20).mean()
+    return {
+        "chart": "volume", "render_hint": "bar",
+        "title": f"{symbol.upper()} volume", "x_label": "Date", "y_label": "Volume",
+        "labels": _dates(df.index),
+        "series": [{"name": "volume", "data": [int(x) if not math.isnan(x) else None for x in df["Volume"]],
+                    "colors": colors},
+                   {"name": "avg_20d", "data": [_clean(x) for x in avg], "type": "line"}],
+        "meta": {"period": period, "rvol_latest": _clean(df["Volume"].iloc[-1] / avg.iloc[-1]) if avg.iloc[-1] else None},
+    }
+
+
+def volume_profile(symbol: str, period: str = "1y", bins: int = 24) -> dict:
+    """Volume-by-price histogram → Point of Control (POC) + 70% value area."""
+    df = _hist(symbol, period, "1d")
+    typ = (df["High"] + df["Low"] + df["Close"]) / 3
+    vol = df["Volume"].values
+    lo, hi = float(typ.min()), float(typ.max())
+    edges = np.linspace(lo, hi, int(bins) + 1)
+    idx = np.clip(np.digitize(typ.values, edges) - 1, 0, int(bins) - 1)
+    prof = np.zeros(int(bins))
+    for i, vv in zip(idx, vol):
+        if not math.isnan(vv):
+            prof[i] += vv
+    centers = [(edges[i] + edges[i + 1]) / 2 for i in range(int(bins))]
+    poc_i = int(np.argmax(prof))
+    # 70% value area around POC
+    total = prof.sum(); target = total * 0.70
+    lo_i = hi_i = poc_i; acc = prof[poc_i]
+    while acc < target and (lo_i > 0 or hi_i < int(bins) - 1):
+        down = prof[lo_i - 1] if lo_i > 0 else -1
+        up = prof[hi_i + 1] if hi_i < int(bins) - 1 else -1
+        if up >= down:
+            hi_i += 1; acc += prof[hi_i]
+        else:
+            lo_i -= 1; acc += prof[lo_i]
+    return {
+        "chart": "volume_profile", "render_hint": "bar_horizontal",
+        "title": f"{symbol.upper()} volume profile ({period})",
+        "x_label": "Volume", "y_label": "Price",
+        "price_levels": [_clean(x) for x in centers],
+        "series": [{"name": "volume_at_price", "data": [int(x) for x in prof]}],
+        "meta": {"current_price": _clean(df["Close"].iloc[-1]),
+                 "poc_price": _clean(centers[poc_i]),
+                 "value_area_high": _clean(centers[hi_i]), "value_area_low": _clean(centers[lo_i]),
+                 "note": "POC = price with most traded volume (strongest S/R); value area = 70% of volume."},
+    }
+
+
 def seasonality(symbol: str, years: int = 6) -> dict:
     """Average return by calendar month (bar) over the lookback."""
     df = _hist(symbol, f"{int(years)}y", "1d")

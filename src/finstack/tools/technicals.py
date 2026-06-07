@@ -25,6 +25,8 @@ def register_technicals_tools(mcp):
                              bollinger position + squeeze, stochastic, trend strength/direction
                 - levels     support/resistance (20d/50d) + classic pivot points (P/R1/R2/S1/S2)
                 - trend      ADX + directional movement detail
+                - volume     RVOL, CMF, MFI, VWAP, up/down-vol ratio, OBV trend,
+                             price/volume divergence, recent volume spikes
                 - all        everything
             period: history window (default "6mo"; use "1y"+ for SMA200).
             interval: bar size ("1d","1wk").

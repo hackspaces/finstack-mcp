@@ -42,6 +42,69 @@ def _r(x, d=2):
         return None
 
 
+def _volume_metrics(df: pd.DataFrame) -> dict:
+    """Volume/flow analytics: RVOL, CMF, MFI, A/D, up-down ratio, divergence, spikes."""
+    c, h, l, v = df["Close"], df["High"], df["Low"], df["Volume"]
+    typ = (h + l + c) / 3
+    avg20 = v.rolling(20).mean().iloc[-1]
+    avg50 = v.rolling(50).mean().iloc[-1]
+    cur = float(v.iloc[-1])
+    rvol = cur / avg20 if avg20 else None
+
+    # Chaikin Money Flow (20)
+    rng = (h - l).replace(0, np.nan)
+    mfm = ((c - l) - (h - c)) / rng
+    mfv = (mfm * v).fillna(0.0)
+    cmf = mfv.rolling(20).sum().iloc[-1] / v.rolling(20).sum().iloc[-1]
+    adl = mfv.cumsum()
+
+    # Money Flow Index (14)
+    rmf = typ * v
+    pos = rmf.where(typ > typ.shift(), 0.0).rolling(14).sum()
+    neg = rmf.where(typ < typ.shift(), 0.0).rolling(14).sum()
+    mfi = (100 - 100 / (1 + pos / neg.replace(0, np.nan))).iloc[-1]
+
+    # up/down volume ratio (20d) + VWAP(20)
+    up_v = v.where(c > c.shift(), 0.0).tail(20).sum()
+    dn_v = v.where(c < c.shift(), 0.0).tail(20).sum()
+    udr = float(up_v / dn_v) if dn_v else None
+    vwap20 = (typ * v).rolling(20).sum().iloc[-1] / v.rolling(20).sum().iloc[-1]
+
+    # price/volume divergence (20d)
+    price_chg = float(c.iloc[-1] / c.iloc[-21] - 1) if len(c) > 21 else 0.0
+    vol_trend_up = bool(avg20 > avg50) if (avg20 and avg50) else None
+    diverg = "none"
+    if price_chg > 0.02 and vol_trend_up is False:
+        diverg = "bearish (price up on fading volume)"
+    elif price_chg < -0.02 and vol_trend_up is False:
+        diverg = "bullish (selloff on fading volume)"
+    elif price_chg > 0.02 and vol_trend_up:
+        diverg = "confirmed_uptrend (price up on rising volume)"
+
+    # recent volume spikes (last 20 days, vol > 2x avg20)
+    spikes = []
+    a20 = v.rolling(20).mean()
+    for d, vol in v.tail(20).items():
+        a = a20.loc[d]
+        if a and vol > 2 * a:
+            move = float(c.loc[d] / c.shift().loc[d] - 1) * 100 if d in c.shift().index else None
+            spikes.append({"date": d.strftime("%Y-%m-%d"), "rvol": _r(vol / a),
+                           "day_move_pct": _r(move)})
+
+    return {
+        "current_volume": int(cur), "avg_volume_20d": int(avg20) if avg20 else None,
+        "avg_volume_50d": int(avg50) if avg50 else None, "rvol": _r(rvol),
+        "cmf_20": _r(cmf, 3), "mfi_14": _r(mfi), "vwap_20": _r(vwap20),
+        "up_down_vol_ratio_20d": _r(udr),
+        "obv_trend": "up" if adl.iloc[-1] > adl.iloc[-20] else "down",
+        "volume_trend": ("rising" if vol_trend_up else "falling") if vol_trend_up is not None else None,
+        "price_volume_divergence": diverg,
+        "recent_spikes": spikes[-5:],
+        "note": "RVOL>1.5 = unusually active; CMF>0 accumulation; MFI>80 ob / <20 os. "
+                "(Total traded volume — NSE delivery% needs broker data, unavailable here.)",
+    }
+
+
 def technicals(symbol: str, views: str = "summary", period: str = "6mo", interval: str = "1d") -> dict:
     """Compute technicals; `views` is a comma list of indicators/signals/levels/trend/summary."""
     df = _hist(symbol, period, interval)
@@ -129,4 +192,6 @@ def technicals(symbol: str, views: str = "summary", period: str = "6mo", interva
     if "trend" in want:
         out["trend"] = {"adx": adx_v, "plus_di": indicators["plus_di"], "minus_di": indicators["minus_di"],
                         "strength": sig["trend_strength"], "direction": sig["trend_direction"]}
+    if "volume" in want or "all" in want:
+        out["volume"] = _volume_metrics(df)
     return out

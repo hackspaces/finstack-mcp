@@ -39,6 +39,8 @@ def register_charts_tools(mcp):
                 - correlation_heatmap return-correlation matrix (>=2 symbols)
                 - efficient_frontier  risk/return cloud + max-Sharpe & min-vol (>=2 symbols)
                 - seasonality         avg return by month (first symbol; uses `years`)
+                - volume              volume bars + 20d avg (first symbol)
+                - volume_profile      volume-by-price + POC & value area (first symbol; uses `bins`)
             period: history window (e.g. "6mo","1y","2y","5y").
             interval: bar size ("1d","1wk","1mo").
             window: rolling window in days (rolling_volatility).
@@ -73,12 +75,16 @@ def register_charts_tools(mcp):
                 res = ce.efficient_frontier(syms, period)
             elif c == "seasonality":
                 res = ce.seasonality(syms[0], years)
+            elif c == "volume":
+                res = ce.volume(syms[0], period, interval)
+            elif c == "volume_profile":
+                res = ce.volume_profile(syms[0], period, bins)
             else:
                 return _dumps({"error": f"unknown chart '{chart}'",
                                    "valid_charts": ["price", "candlestick", "comparison", "drawdown",
                                                     "returns_histogram", "rolling_volatility",
                                                     "correlation_heatmap", "efficient_frontier",
-                                                    "seasonality"]}, indent=2)
+                                                    "seasonality", "volume", "volume_profile"]}, indent=2)
         except Exception as e:
             return _dumps({"error": f"{type(e).__name__}: {e}", "chart": c}, indent=2)
 
