@@ -45,10 +45,10 @@ BASKETS: dict[str, dict] = {
     "tea_coffee_plantation": {"category": "agri", "symbols": ["TATACONSUM", "CCL", "MCLEODRUSS", "JAYSREETEA"]},
 
     # ── Auto & ancillaries ──
-    "auto_oems": {"category": "auto", "symbols": ["MARUTI", "TATAMOTORS", "M&M", "BAJAJ-AUTO", "EICHERMOT", "HEROMOTOCO", "TVSMOTOR", "ASHOKLEY"]},
+    "auto_oems": {"category": "auto", "symbols": ["MARUTI", "TMPV", "TMCV", "M&M", "BAJAJ-AUTO", "EICHERMOT", "HEROMOTOCO", "TVSMOTOR", "ASHOKLEY"]},
     "auto_ancillaries": {"category": "auto", "symbols": ["BOSCHLTD", "MOTHERSON", "BHARATFORG", "BALKRISIND", "MRF", "APOLLOTYRE", "SONACOMS", "ENDURANCE", "EXIDEIND", "UNOMINDA"]},
     "tyres": {"category": "auto", "symbols": ["MRF", "APOLLOTYRE", "BALKRISIND", "CEATLTD", "JKTYRE", "TVSSRICHAK"]},
-    "ev_value_chain": {"category": "auto", "symbols": ["TATAMOTORS", "M&M", "TVSMOTOR", "OLAELEC", "SONACOMS", "EXIDEIND", "ARE&M", "HBLENGINE"]},
+    "ev_value_chain": {"category": "auto", "symbols": ["TMPV", "M&M", "TVSMOTOR", "OLAELEC", "SONACOMS", "EXIDEIND", "ARE&M", "HBLENGINE"]},
     "batteries": {"category": "auto", "symbols": ["EXIDEIND", "ARE&M", "HBLENGINE"]},
     "bearings": {"category": "industrials", "symbols": ["SKFINDIA", "SCHAEFFLER", "TIMKEN", "NRBBEARING"]},
 
