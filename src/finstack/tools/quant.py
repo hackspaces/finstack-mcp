@@ -25,6 +25,9 @@ from finstack.data.quant_engine import (
     forecast_volatility,
     correlation_matrix,
     pairs_cointegration,
+    monte_carlo,
+    mean_reversion,
+    drift_forecast,
 )
 from finstack.data.analytics import backtest_sma_crossover
 
@@ -35,6 +38,9 @@ VALID_ANALYSES = [
     "correlation",
     "pairs",
     "backtest",
+    "monte_carlo",
+    "mean_reversion",
+    "drift",
 ]
 
 
@@ -54,6 +60,7 @@ def register_quant_tools(mcp):
         short_window: int = 20,
         long_window: int = 50,
         initial_capital: float = 100000,
+        sims: int = 5000,
     ) -> str:
         """Configurable quantitative analytics on NSE equities (one tool, many modes).
 
@@ -74,6 +81,10 @@ def register_quant_tools(mcp):
                 - correlation  return-correlation matrix + diversification note
                 - pairs        cointegration test + pairs-trading signal
                 - backtest     SMA crossover backtest vs buy-and-hold
+                - monte_carlo  GBM price distribution `horizon` days out (percentiles,
+                               prob above current) — uses `horizon`, `sims`
+                - mean_reversion  AR(1) half-life + Hurst + 50d z-score + regime/signal
+                - drift        annualized drift/vol projected to a 90% price band (`horizon`)
             benchmark: benchmark ticker for `risk` (default Nifty 50 "^NSEI").
             period: history window (e.g. "1y", "2y"). Empty -> sensible per-analysis
                     default ("1y" for risk/optimize/correlation, "2y" for
@@ -157,6 +168,17 @@ def register_quant_tools(mcp):
                     period=_period("2y"),
                     initial_capital=initial_capital,
                 )
+        elif op == "monte_carlo":
+            def _one(sym):
+                return monte_carlo(sym, horizon=(horizon if horizon != 5 else 21),
+                                   sims=sims, period=_period("3y"))
+        elif op == "mean_reversion":
+            def _one(sym):
+                return mean_reversion(sym, period=_period("2y"))
+        elif op == "drift":
+            def _one(sym):
+                return drift_forecast(sym, horizon=(horizon if horizon != 5 else 252),
+                                      period=_period("3y"))
         else:  # defensive — should be unreachable given the guard above
             return _dumps({
                 "error": f"Unhandled analysis '{analysis}'.",

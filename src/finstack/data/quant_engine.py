@@ -464,3 +464,89 @@ def pairs_cointegration(symbol1: str, symbol2: str, period: str = "2y") -> dict:
         }
     except Exception as e:
         return {"error": str(e)}
+
+
+# ── Forecasting (probabilistic — distributions/intervals, NOT point predictions) ──
+
+def _hurst(ts: np.ndarray) -> float | None:
+    """Hurst exponent via rescaled-range across lags. <0.5 mean-reverting, >0.5 trending."""
+    try:
+        ts = np.asarray(ts, dtype=float)
+        lags = range(2, min(40, len(ts) // 2))
+        tau = [np.std(ts[lag:] - ts[:-lag]) for lag in lags]
+        tau = [t for t in tau if t > 0]
+        if len(tau) < 5:
+            return None
+        poly = np.polyfit(np.log(list(lags)[:len(tau)]), np.log(tau), 1)
+        return round(float(poly[0]), 3)
+    except Exception:
+        return None
+
+
+def monte_carlo(symbol: str, horizon: int = 21, sims: int = 5000, period: str = "3y") -> dict:
+    """GBM Monte-Carlo price distribution `horizon` trading days out."""
+    close = _fetch_close(symbol, period)
+    rets = _daily_returns(close)
+    if len(rets) < 60:
+        return {"error": f"insufficient history for {symbol}"}
+    mu, sd, s0 = float(rets.mean()), float(rets.std()), float(close.iloc[-1])
+    rng = np.random.default_rng(7)
+    drift = mu - 0.5 * sd * sd
+    shocks = rng.normal(drift, sd, size=(int(sims), int(horizon)))
+    final = s0 * np.exp(shocks.sum(axis=1))
+    pc = lambda p: round(float(np.percentile(final, p)), 2)
+    return {
+        "model": "monte_carlo_gbm", "symbol": symbol.upper(), "current_price": round(s0, 2),
+        "horizon_days": int(horizon), "simulations": int(sims),
+        "expected_price": round(float(final.mean()), 2),
+        "expected_return_pct": round(float((final.mean() / s0 - 1) * 100), 2),
+        "percentiles": {"p5": pc(5), "p25": pc(25), "p50": pc(50), "p75": pc(75), "p95": pc(95)},
+        "prob_above_current_pct": round(float((final > s0).mean() * 100), 1),
+        "daily_drift": round(mu, 5), "daily_vol": round(sd, 5),
+        "disclaimer": "Probability distribution from historical drift/vol — NOT a prediction.",
+    }
+
+
+def mean_reversion(symbol: str, period: str = "2y") -> dict:
+    """AR(1) half-life + Hurst + z-score: is the stock mean-reverting, and where in the range?"""
+    close = _fetch_close(symbol, period)
+    if len(close) < 60:
+        return {"error": f"insufficient history for {symbol}"}
+    lp = np.log(close.values.astype(float))
+    b, _a = np.polyfit(lp[:-1], lp[1:], 1)
+    half_life = round(float(-np.log(2) / np.log(b)), 1) if 0 < b < 1 else None
+    m = float(close.rolling(50).mean().iloc[-1]); sd = float(close.rolling(50).std().iloc[-1])
+    z = round((float(close.iloc[-1]) - m) / sd, 2) if sd else None
+    h = _hurst(lp)
+    regime = "mean_reverting" if (h is not None and h < 0.45) else ("trending" if h is not None and h > 0.55 else "random_walk")
+    sig = "NEUTRAL"
+    if z is not None and regime == "mean_reverting":
+        sig = "BUY_DIP" if z < -1.5 else ("SELL_RIP" if z > 1.5 else "NEUTRAL")
+    return {
+        "model": "mean_reversion", "symbol": symbol.upper(), "current_price": round(float(close.iloc[-1]), 2),
+        "hurst_exponent": h, "regime": regime, "half_life_days": half_life,
+        "zscore_50d": z, "fair_value_50d": round(m, 2), "signal": sig,
+        "note": "Hurst<0.45 mean-reverting, >0.55 trending. Half-life = days to revert halfway.",
+    }
+
+
+def drift_forecast(symbol: str, horizon: int = 252, period: str = "3y") -> dict:
+    """Annualized drift + vol projected to a 90% expected price band `horizon` days out."""
+    close = _fetch_close(symbol, period)
+    rets = _daily_returns(close)
+    if len(rets) < 60:
+        return {"error": f"insufficient history for {symbol}"}
+    mu = float(rets.mean()) * 252
+    sd = float(rets.std()) * np.sqrt(252)
+    s0 = float(close.iloc[-1]); h = int(horizon) / 252
+    exp_ret = mu * h
+    half = 1.645 * sd * np.sqrt(h)  # 90% CI
+    return {
+        "model": "drift_projection", "symbol": symbol.upper(), "current_price": round(s0, 2),
+        "horizon_days": int(horizon), "annualized_drift_pct": round(mu * 100, 2),
+        "annualized_vol_pct": round(sd * 100, 2),
+        "expected_return_pct": round(exp_ret * 100, 2),
+        "expected_price": round(s0 * (1 + exp_ret), 2),
+        "ci90_price": [round(s0 * (1 + exp_ret - half), 2), round(s0 * (1 + exp_ret + half), 2)],
+        "disclaimer": "Drift extrapolation with a 90% band — assumes past drift/vol persist; NOT a guarantee.",
+    }

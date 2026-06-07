@@ -23,6 +23,7 @@ from finstack.tools.batch import register_batch_tools
 from finstack.tools.tax import register_tax_tools
 from finstack.tools.charts import register_charts_tools
 from finstack.tools.sector import register_sector_tools
+from finstack.tools.technicals import register_technicals_tools
 
 config.setup_logging()
 logger = logging.getLogger("finstack")
@@ -149,6 +150,7 @@ register_models_tools(mcp)       # models (valuation + forensic, merged)
 register_batch_tools(mcp)        # batch_analyze
 register_charts_tools(mcp)       # chart_data
 register_sector_tools(mcp)       # sector (themes/baskets/universe)
+register_technicals_tools(mcp)   # technicals
 register_tax_tools(mcp)          # calculate_tax_liability
 
 
@@ -171,12 +173,13 @@ def finstack_info() -> str:
         "options": "Option chain/OI/greeks/PCR/max-pain. Args: symbol, views.",
         "analyze": "Multi-agent brief/score/timeline/divergence/pump/sentiment/earnings/etc. Args: symbol, lenses.",
         "portfolio": "Portfolio X-ray (P&L, risk, concentration). Args: holdings.",
-        "quant": "Risk metrics/optimize/GARCH vol/correlation/pairs/backtest. Args: symbols, analysis.",
+        "quant": "Risk/optimize/GARCH vol/correlation/pairs/backtest + forecasts (monte_carlo, mean_reversion, drift). Args: symbols, analysis.",
         "models": "Computation-first financial models you supply data to: DCF, reverse-DCF, Graham, owner-earnings, EPV, Beneish-M, Altman-Z, Piotroski-F, Sloan, DuPont, Merton-DD.",
         "macro": "Live key-free macro (World Bank/DBnomics) with as_of/source/is_stale stamps.",
         "batch_analyze": "Run any per-symbol analysis across many tickers concurrently.",
         "calculate_tax_liability": "Indian LTCG/STCG tax on an equity/MF trade.",
         "chart_data": "Plot-ready data for interactive charts (price/candlestick/comparison/drawdown/heatmap/frontier/...).",
+        "technicals": "Full TA: indicators (RSI/MACD/Bollinger/ADX/...), signals (crosses/squeeze/ob-os), support/resistance/pivots, composite bull/bear bias.",
         "sector": "~120 sector/thematic baskets + full ~2.1k NSE universe: performance/rotation/constituents/compare/search; custom & combinatorial baskets.",
     }
     return json.dumps(
