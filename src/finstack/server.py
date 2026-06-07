@@ -22,6 +22,7 @@ from finstack.tools.intelligence import register_intelligence_tools
 from finstack.tools.phase4 import register_phase4_tools
 from finstack.tools.quant import register_quant_tools
 from finstack.tools.batch import register_batch_tools
+from finstack.tools.pro import register_pro_tools
 
 config.setup_logging()
 logger = logging.getLogger("finstack")
@@ -151,6 +152,7 @@ register_intelligence_tools(mcp)
 register_phase4_tools(mcp)
 register_quant_tools(mcp)
 register_batch_tools(mcp)
+register_pro_tools(mcp)
 
 
 @mcp.tool()
